@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Hand Gesture Recognition & Distress Signal AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(15, 23, 42, 0.75);
+      --accent-cyan: #00f0ff;
+      --accent-magenta: #f72585;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-red: #ef4444;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background: radial-gradient(circle at 50% 10%, #1e1b4b 0%, var(--bg) 70%);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+    header {
+      padding: 1rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(10, 15, 30, 0.8);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      z-index: 20;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-family: 'Orbitron', monospace;
+      color: #000;
+      font-size: 1.1rem;
+    }
+    .brand-title {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      font-size: 1.1rem;
+      letter-spacing: 0.05em;
+      background: linear-gradient(90deg, #fff, var(--accent-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .brand-subtitle {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .header-actions {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+    .fps-badge {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.8rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 20px;
+      background: rgba(0, 240, 255, 0.12);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      color: var(--accent-cyan);
+    }
+    .github-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.4rem 0.8rem;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: all 0.2s;
+    }
+    .github-link:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .alert-banner {
+      width: 100%;
+      background: linear-gradient(90deg, #dc2626, #b91c1c);
+      color: #fff;
+      padding: 0.85rem 1.25rem;
+      border-radius: 12px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 0.85rem;
+      margin-bottom: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      box-shadow: 0 0 30px rgba(239, 68, 68, 0.7);
+      animation: pulseAlert 0.8s infinite alternate;
+      z-index: 15;
+    }
+    @keyframes pulseAlert {
+      from { transform: scale(1); filter: brightness(1); }
+      to { transform: scale(1.01); filter: brightness(1.25); }
+    }
+
+    .viewport-card {
+      position: relative;
+      width: 100%;
+      max-width: 900px;
+      aspect-ratio: 4 / 3;
+      background: #000;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.1);
+    }
+    video {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      pointer-events: none;
+    }
+
+    .hud-overlay {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      right: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .hud-chip {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      padding: 0.6rem 0.9rem;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+    .hud-chip-label {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.2rem;
+    }
+    .hud-chip-val {
+      font-family: 'Orbitron', monospace;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+    }
+    .finger-count-val {
+      color: var(--accent-emerald);
+      font-size: 1.4rem;
+    }
+
+    .control-bar {
+      margin-top: 1.25rem;
+      display: flex;
+      gap: 0.85rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      width: 100%;
+      max-width: 900px;
+    }
+    .btn {
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 0.75rem 1.4rem;
+      border-radius: 10px;
+      border: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-cyan), #00a8ff);
+      color: #000;
+      box-shadow: 0 4px 16px rgba(0, 240, 255, 0.35);
+    }
+    .btn-primary:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fff;
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateY(-1px);
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .gesture-legend {
+      margin-top: 2rem;
+      max-width: 900px;
+      width: 100%;
+      background: var(--card-bg);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 1.25rem 1.5rem;
+    }
+    .legend-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent-cyan);
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .gesture-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 0.6rem;
+    }
+    .gesture-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 8px;
+      padding: 0.5rem 0.65rem;
+      font-size: 0.78rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .gesture-card.highlight {
+      border-color: var(--accent-red);
+      background: rgba(239, 68, 68, 0.1);
+      color: #fca5a5;
+    }
+
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(9, 13, 22, 0.92);
+      backdrop-filter: blur(8px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      z-index: 30;
+      transition: opacity 0.4s;
+    }
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid rgba(0, 240, 255, 0.2);
+      border-top-color: var(--accent-cyan);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .loading-text {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.95rem;
+      color: var(--accent-cyan);
+      letter-spacing: 0.05em;
+    }
+
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      margin-top: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="brand-icon">🖐️</div>
+      <div>
+        <div class="brand-title">VISION GESTURE AI</div>
+        <div class="brand-subtitle">21-Joint Skeleton Tracking &amp; Distress Signal</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="fps-badge" id="fpsBadge">60 FPS</div>
+      <a href="https://github.com/keerthikumarratakonda/hand-gesture-recognition" target="_blank" class="github-link">
+        <svg height="16" width="16" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+        </svg>
+        GitHub
+      </a>
+    </div>
+  </header>
+
+  <main>
+    <div id="alertBanner" class="alert-banner">
+      <span>🚨</span>
+      <span>EMERGENCY DISTRESS SIGNAL DETECTED (HELP / DOMESTIC VIOLENCE SIGNAL)</span>
+      <span>🚨</span>
+    </div>
+
+    <div class="viewport-card">
+      <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <div class="loading-text" id="loadingStatus">Loading MediaPipe AI Model...</div>
+      </div>
+
+      <video id="webcam" playsinline autoplay muted></video>
+      <canvas id="outputCanvas"></canvas>
+
+      <div class="hud-overlay">
+        <div class="hud-chip">
+          <div class="hud-chip-label">Active Gesture</div>
+          <div class="hud-chip-val" id="hudGesture">Ready</div>
+          <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;" id="hudHandedness">-</div>
+        </div>
+        <div class="hud-chip" style="text-align: right;">
+          <div class="hud-chip-label">Finger Count</div>
+          <div class="hud-chip-val finger-count-val" id="hudFingers">0</div>
+          <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;" id="hudBreakdown">Both Hands</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="control-bar">
+      <button id="btnStart" class="btn btn-primary">
+        <span>📹</span> Start Camera
+      </button>
+      <button id="btnFlip" class="btn btn-secondary" style="display:none;">
+        <span>🔄</span> Flip Camera
+      </button>
+      <button id="btnSnapshot" class="btn btn-secondary" disabled>
+        <span>📸</span> Capture Snapshot
+      </button>
+    </div>
+
+    <div class="gesture-legend">
+      <div class="legend-title">⚡ Supported Gestures &amp; Signals</div>
+      <div class="gesture-grid">
+        <div class="gesture-card highlight">🚨 Help Signal (Step 2)</div>
+        <div class="gesture-card">⚠️ Help Step 1 (Thumb In)</div>
+        <div class="gesture-card">👍 Thumbs Up (Like)</div>
+        <div class="gesture-card">👎 Thumbs Down (Dislike)</div>
+        <div class="gesture-card">✌️ Peace / Two Up</div>
+        <div class="gesture-card">🤙 Call Me</div>
+        <div class="gesture-card">🤘 Rock On / Horns</div>
+        <div class="gesture-card">👌 OK Sign</div>
+        <div class="gesture-card">👆 Point / One (1)</div>
+        <div class="gesture-card">✋ Open Palm (5)</div>
+        <div class="gesture-card">✊ Closed Fist (0)</div>
+        <div class="gesture-card">🤏 Pinch</div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    Real-Time 21-Joint Skeleton Vision Engine &bull; Deployed via GitHub Pages &bull; MediaPipe AI
+  </footer>
+
+  <!-- MediaPipe Tasks Vision Bundle via CDN -->
+  <script type="module">
+    import { FilesetResolver, GestureRecognizer, DrawingUtils } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
+
+    const video = document.getElementById("webcam");
+    const canvas = document.getElementById("outputCanvas");
+    const ctx = canvas.getContext("2d");
+    const btnStart = document.getElementById("btnStart");
+    const btnFlip = document.getElementById("btnFlip");
+    const btnSnapshot = document.getElementById("btnSnapshot");
+    const fpsBadge = document.getElementById("fpsBadge");
+    const hudGesture = document.getElementById("hudGesture");
+    const hudHandedness = document.getElementById("hudHandedness");
+    const hudFingers = document.getElementById("hudFingers");
+    const hudBreakdown = document.getElementById("hudBreakdown");
+    const alertBanner = document.getElementById("alertBanner");
+    const loadingOverlay = document.getElementById("loadingOverlay");
+    const loadingStatus = document.getElementById("loadingStatus");
+
+    let gestureRecognizer = null;
+    let runningMode = "VIDEO";
+    let isCameraRunning = false;
+    let facingMode = "user";
+    let lastVideoTime = -1;
+    let fps = 60.0;
+    let lastFrameTime = performance.now();
+
+    // Temporal latching for distress signal
+    const helpMemory = {
+      Left: { step1Time: 0, latched: false },
+      Right: { step1Time: 0, latched: false }
+    };
+
+    // 1. Initialize MediaPipe Gesture Recognizer
+    async function initVision() {
+      try {
+        loadingStatus.textContent = "Loading WebAssembly Vision Engine...";
+        const vision = await FilesetResolver.forVisionTasks(
+          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
+        );
+        loadingStatus.textContent = "Loading Gesture Model...";
+        gestureRecognizer = await GestureRecognizer.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task",
+            delegate: "GPU"
+          },
+          runningMode: runningMode,
+          numHands: 2,
+          minHandDetectionConfidence: 0.5,
+          minHandPresenceConfidence: 0.5,
+          minTrackingConfidence: 0.5
+        });
+        loadingOverlay.style.opacity = "0";
+        setTimeout(() => loadingOverlay.style.display = "none", 400);
+      } catch (err) {
+        console.error("Init Error:", err);
+        loadingStatus.textContent = "Failed to load model. Check network access.";
+      }
+    }
+    initVision();
+
+    // 2. Camera Start / Stop
+    async function startCamera() {
+      if (!gestureRecognizer) return;
+      if (isCameraRunning) {
+        stopCamera();
+        return;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: facingMode,
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: false
+        });
+        video.srcObject = stream;
+        video.addEventListener("loadeddata", () => {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          isCameraRunning = true;
+          btnStart.innerHTML = "<span>⏹️</span> Stop Camera";
+          btnStart.classList.replace("btn-primary", "btn-secondary");
+          btnSnapshot.disabled = false;
+          btnFlip.style.display = "inline-flex";
+          requestAnimationFrame(processLoop);
+        });
+      } catch (err) {
+        alert("Camera permission denied or camera not found: " + err.message);
+      }
+    }
+
+    function stopCamera() {
+      if (video.srcObject) {
+        video.srcObject.getTracks().forEach(t => t.stop());
+        video.srcObject = null;
+      }
+      isCameraRunning = false;
+      btnStart.innerHTML = "<span>📹</span> Start Camera";
+      btnStart.classList.replace("btn-secondary", "btn-primary");
+      btnSnapshot.disabled = true;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      hudGesture.textContent = "Ready";
+      hudHandedness.textContent = "-";
+      hudFingers.textContent = "0";
+      alertBanner.style.display = "none";
+    }
+
+    btnStart.addEventListener("click", startCamera);
+    btnFlip.addEventListener("click", () => {
+      facingMode = facingMode === "user" ? "environment" : "user";
+      stopCamera();
+      startCamera();
+    });
+
+    btnSnapshot.addEventListener("click", () => {
+      const snapCanvas = document.createElement("canvas");
+      snapCanvas.width = canvas.width;
+      snapCanvas.height = canvas.height;
+      const sCtx = snapCanvas.getContext("2d");
+      // Draw mirrored video if front camera
+      sCtx.save();
+      sCtx.translate(snapCanvas.width, 0);
+      sCtx.scale(-1, 1);
+      sCtx.drawImage(video, 0, 0, snapCanvas.width, snapCanvas.height);
+      sCtx.restore();
+      // Draw overlay
+      sCtx.drawImage(canvas, 0, 0);
+      const link = document.createElement("a");
+      link.download = `gesture_snapshot_${Date.now()}.png`;
+      link.href = snapCanvas.toDataURL("image/png");
+      link.click();
+    });
+
+    // 3. Mathematical Geometry Classifier & Finger Counter (matching Python logic)
+    function analyzeHand(landmarks, handedness) {
+      const now = performance.now() / 1000;
+      const pts = landmarks.map(lm => ({ x: lm.x, y: lm.y, z: lm.z }));
+      const wrist = pts[0];
+      const middleMcp = pts[9];
+      const handSize = Math.max(0.01, Math.hypot(middleMcp.x - wrist.x, middleMcp.y - wrist.y));
+
+      // Helper distance
+      const dist2d = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+      // 4 Fingers extension check
+      const checkExt = (tip, pip, mcp) => {
+        const ext = dist2d(tip, mcp) / handSize;
+        return (dist2d(tip, mcp) > 1.15 * dist2d(pip, mcp)) &&
+               (dist2d(tip, wrist) > dist2d(pip, wrist)) &&
+               (ext > 0.48);
+      };
+
+      const indexUp = checkExt(pts[8], pts[6], pts[5]);
+      const middleUp = checkExt(pts[12], pts[10], pts[9]);
+      const ringUp = checkExt(pts[16], pts[14], pts[13]);
+      const pinkyUp = checkExt(pts[20], pts[18], pts[17]);
+      const fingers4Count = (indexUp ? 1 : 0) + (middleUp ? 1 : 0) + (ringUp ? 1 : 0) + (pinkyUp ? 1 : 0);
+
+      // Thumb
+      const thumbTip = pts[4], thumbIp = pts[3], thumbMcp = pts[2], pinkyMcp = pts[17], indexMcp = pts[5];
+      const thumbPinkyDist = dist2d(thumbTip, pinkyMcp) / handSize;
+      const thumbIndexDist = dist2d(thumbTip, indexMcp) / handSize;
+      const thumbWristDist = dist2d(thumbTip, wrist) / handSize;
+      const thumbIpWristDist = dist2d(thumbIp, wrist) / handSize;
+
+      const thumbUpward = thumbTip.y < thumbMcp.y - 0.12 * handSize;
+      const thumbDownward = thumbTip.y > thumbMcp.y + 0.08 * handSize;
+      const isPureThumbsUp = (thumbUpward && fingers4Count === 0 && thumbIndexDist > 0.38 && thumbPinkyDist > 0.58);
+      const isPureThumbsDown = (thumbDownward && fingers4Count === 0 && thumbIndexDist > 0.38 && thumbPinkyDist > 0.58);
+
+      const thumbUp = isPureThumbsUp || (thumbPinkyDist > 0.62 && thumbIndexDist > 0.38 && thumbWristDist > thumbIpWristDist + 0.02) || (thumbIndexDist > 0.48);
+
+      // Total finger count for this hand
+      let fingerCount = fingers4Count + (thumbUp ? 1 : 0);
+
+      // Distress Signal (Help Signal):
+      // Step 1: Thumb tucked on palm, 4 fingers straight up
+      const isStep1 = (fingers4Count >= 3 && !thumbUp && thumbIndexDist < 0.45 && thumbPinkyDist < 0.58);
+      const mem = helpMemory[handedness] || { step1Time: 0, latched: false };
+
+      if (isStep1) {
+        mem.step1Time = now;
+      } else if (thumbUp || fingers4Count >= 3) {
+        mem.latched = false;
+      }
+
+      // Step 2: Trap thumb - 4 fingers close down over tucked thumb
+      let isHelp = false;
+      const timeSinceStep1 = now - mem.step1Time;
+      const isTrappedFist = (fingers4Count === 0 && thumbIndexDist < 0.38 && thumbPinkyDist < 0.55);
+
+      if (timeSinceStep1 < 4.5 && isTrappedFist) {
+        mem.latched = true;
+      }
+      if (mem.latched && (fingers4Count <= 1 && !thumbUp)) {
+        isHelp = true;
+      }
+
+      // Gesture determination
+      let gesture = "Unknown";
+      const pinchDist = dist2d(thumbTip, pts[8]) / handSize;
+
+      if (isHelp) gesture = "Help";
+      else if (isStep1) gesture = "Help (Thumb In)";
+      else if (isPureThumbsUp) gesture = "Thumbs Up";
+      else if (isPureThumbsDown) gesture = "Thumbs Down";
+      else if (pinchDist < 0.20 && fingers4Count >= 2) gesture = "OK Sign";
+      else if (pinchDist < 0.22 && fingers4Count <= 1) gesture = "Pinch";
+      else if (indexUp && pinkyUp && !middleUp && !ringUp) gesture = "Rock On";
+      else if (thumbUp && pinkyUp && !indexUp && !middleUp && !ringUp) gesture = "Call Me";
+      else if (indexUp && middleUp && !ringUp && !pinkyUp) gesture = "Peace (2)";
+      else if (indexUp && !middleUp && !ringUp && !pinkyUp && !thumbUp) gesture = "Point (1)";
+      else if (fingers4Count === 0 && !thumbUp) gesture = "Fist (0)";
+      else if (fingerCount === 5) gesture = "Open Palm (5)";
+      else if (fingerCount === 4) gesture = "Four (4)";
+      else if (fingerCount === 3) gesture = "Three (3)";
+
+      return { gesture, fingerCount, isHelp };
+    }
+
+    // 4. Skeleton Neon Renderer
+    const CONNECTIONS = [
+      [0,1],[1,2],[2,3],[3,4],
+      [0,5],[5,6],[6,7],[7,8],
+      [5,9],[9,10],[10,11],[11,12],
+      [9,13],[13,14],[14,15],[15,16],
+      [13,17],[0,17],[17,18],[18,19],[19,20]
+    ];
+
+    function drawSkeleton(landmarks, isHelp, isRight) {
+      const w = canvas.width;
+      const h = canvas.height;
+      // Mirror x coordinate because video is mirrored
+      const px = landmarks.map(lm => ({ x: (1 - lm.x) * w, y: lm.y * h }));
+
+      const baseColor = isHelp ? "#ef4444" : (isRight ? "#00f0ff" : "#f72585");
+      const jointColor = isHelp ? "#ff0033" : "#ffffff";
+
+      // Draw glowing lines
+      ctx.save();
+      ctx.shadowColor = baseColor;
+      ctx.shadowBlur = isHelp ? 25 : 15;
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = baseColor;
+
+      for (const [start, end] of CONNECTIONS) {
+        ctx.beginPath();
+        ctx.moveTo(px[start].x, px[start].y);
+        ctx.lineTo(px[end].x, px[end].y);
+        ctx.stroke();
+      }
+
+      // Draw Joints
+      ctx.fillStyle = jointColor;
+      for (let i = 0; i < px.length; i++) {
+        ctx.beginPath();
+        const r = (i === 4 || i === 8 || i === 12 || i === 16 || i === 20) ? 6 : 4;
+        ctx.arc(px[i].x, px[i].y, r, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // 5. Main Processing Loop
+    async function processLoop() {
+      if (!isCameraRunning) return;
+
+      const now = performance.now();
+      const dt = (now - lastFrameTime) / 1000;
+      lastFrameTime = now;
+      if (dt > 0) {
+        fps = 0.9 * fps + 0.1 * (1 / dt);
+        fpsBadge.textContent = `${Math.round(fps)} FPS`;
+      }
+
+      if (video.currentTime !== lastVideoTime) {
+        lastVideoTime = video.currentTime;
+        const results = gestureRecognizer.recognizeForVideo(video, now);
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        let totalFingers = 0;
+        let anyHelp = false;
+        const activeGestures = [];
+        const breakdowns = [];
+
+        if (results && results.landmarks && results.landmarks.length > 0) {
+          for (let i = 0; i < results.landmarks.length; i++) {
+            const rawHandedness = (results.handedness && results.handedness[i] && results.handedness[i][0]) ? results.handedness[i][0].categoryName : "Right";
+            // Inverted for mirrored display
+            const handedness = rawHandedness === "Left" ? "Right" : "Left";
+            const lm = results.landmarks[i];
+
+            const analysis = analyzeHand(lm, handedness);
+            totalFingers += analysis.fingerCount;
+            if (analysis.isHelp) anyHelp = true;
+
+            drawSkeleton(lm, analysis.isHelp, handedness === "Right");
+
+            activeGestures.push(`${handedness}: ${analysis.gesture}`);
+            breakdowns.push(`${handedness[0]}: ${analysis.fingerCount}F`);
+          }
+
+          hudGesture.textContent = activeGestures.join(" | ");
+          hudHandedness.textContent = results.landmarks.length === 2 ? "Two Hands Tracked" : "Single Hand Tracked";
+          hudFingers.textContent = totalFingers;
+          hudBreakdown.textContent = breakdowns.join(" + ");
+        } else {
+          hudGesture.textContent = "Detecting...";
+          hudHandedness.textContent = "Show hand in camera";
+          hudFingers.textContent = "0";
+          hudBreakdown.textContent = "No Hands";
+        }
+
+        alertBanner.style.display = anyHelp ? "flex" : "none";
+      }
+
+      requestAnimationFrame(processLoop);
+    }
+  </script>
+</body>
+</html>
